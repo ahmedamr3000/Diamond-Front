@@ -1,0 +1,256 @@
+import { Component, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { AuthService } from '../../services/auth.service';
+import { OrdersService } from '../../services/orders.service';
+import { Order, STEPS_CONFIG, StepConfig } from '../../models/order.model';
+import { ROLES_META } from '../../models/user.model';
+
+@Component({
+  selector: 'app-order-detail',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './order-detail.component.html',
+  styleUrl: './order-detail.component.css'
+})
+export class OrderDetailComponent implements OnInit {
+  order: Order | null = null;
+  isLoading = true;
+  steps = STEPS_CONFIG;
+  selectedStepIndex = 0;
+
+  // Confirm modal
+  showConfirmModal = false;
+  confirmIcon = '';
+  confirmText = '';
+  confirmLabel = '';
+  confirmIsDanger = false;
+  confirmAction: (() => void) | null = null;
+
+  // Toast
+  toastMessage = '';
+  toastType = 'success';
+  showToast = false;
+
+  // Button loading states
+  loadingStepId: string | null = null;
+
+  constructor(
+    public auth: AuthService,
+    private ordersService: OrdersService,
+    private route: ActivatedRoute,
+    private router: Router
+  ) {}
+
+  ngOnInit(): void {
+    const id = Number(this.route.snapshot.paramMap.get('id'));
+    if (!id) {
+      this.router.navigate(['/dashboard']);
+      return;
+    }
+    this.loadOrder(id);
+  }
+
+  loadOrder(orderId: number): void {
+    this.isLoading = true;
+    this.ordersService.fetchById(orderId).subscribe({
+      next: (order) => {
+        this.order = order;
+        this.isLoading = false;
+        // Auto-select the active step (or last step if all done)
+        const activeIdx = this.getActiveStepIndex();
+        this.selectedStepIndex = activeIdx < this.steps.length ? activeIdx : this.steps.length - 1;
+      },
+      error: () => {
+        this.displayToast('خطأ في تحميل الطلب', 'error');
+        this.router.navigate(['/dashboard']);
+      }
+    });
+  }
+
+  selectStep(idx: number): void {
+    this.selectedStepIndex = idx;
+  }
+
+  get currentSelectedStep(): StepConfig {
+    return this.steps[this.selectedStepIndex] || this.steps[0];
+  }
+
+  goBack(): void {
+    this.router.navigate(['/dashboard']);
+  }
+
+  getStatus(): string {
+    if (!this.order) return 'new';
+    return this.ordersService.getStatus(this.order);
+  }
+
+  getStatusLabel(): string {
+    const labels: Record<string, string> = { 'new': 'جديد', 'in-progress': 'قيد التنفيذ', 'completed': 'مكتمل' };
+    return labels[this.getStatus()] || '';
+  }
+
+  getBadgeClass(): string {
+    const classes: Record<string, string> = { 'new': 'badge-new', 'in-progress': 'badge-in-progress', 'completed': 'badge-completed' };
+    return classes[this.getStatus()] || '';
+  }
+
+  getActiveStepIndex(): number {
+    if (!this.order) return 0;
+    return this.ordersService.getActiveStepIndex(this.order);
+  }
+
+  getCompletedCount(): number {
+    if (!this.order) return 0;
+    return this.ordersService.getCompletedCount(this.order);
+  }
+
+  getFillPercent(): number {
+    const completed = this.getCompletedCount();
+    if (completed === 0) return 0;
+    return (completed / this.steps.length) * 100;
+  }
+
+  getStepperFillPercent(): number {
+    const completed = this.getCompletedCount();
+    if (completed === 0) return 0;
+    if (completed >= this.steps.length) return 100;
+    return (completed / (this.steps.length - 1)) * 100;
+  }
+
+  getStepClass(idx: number): string {
+    if (!this.order) return 'pending';
+    const step = this.steps[idx];
+    const activeIdx = this.getActiveStepIndex();
+    if (this.order.steps?.[step.id]?.status === 'done') return 'completed';
+    if (idx === activeIdx) return 'active';
+    return 'pending';
+  }
+
+  getStepStatusText(idx: number): string {
+    if (!this.order) return 'في الانتظار';
+    const step = this.steps[idx];
+    const activeIdx = this.getActiveStepIndex();
+    if (this.order.steps?.[step.id]?.status === 'done') return 'مكتمل ✓';
+    if (idx === activeIdx) return 'المرحلة الحالية';
+    return 'في الانتظار';
+  }
+
+  getStepStatusClass(idx: number): string {
+    if (!this.order) return 'pending';
+    const step = this.steps[idx];
+    const activeIdx = this.getActiveStepIndex();
+    if (this.order.steps?.[step.id]?.status === 'done') return 'done';
+    if (idx === activeIdx) return 'in-progress';
+    return 'pending';
+  }
+
+  isStepDone(stepId: string): boolean {
+    return this.order?.steps?.[stepId as keyof typeof this.order.steps]?.status === 'done';
+  }
+
+  isActiveStep(idx: number): boolean {
+    return idx === this.getActiveStepIndex();
+  }
+
+  canComplete(stepId: string): boolean {
+    return this.auth.canCompleteStep(stepId);
+  }
+
+  getCompletedDate(stepId: string): string {
+    if (!this.order) return '';
+    const stepData = this.order.steps?.[stepId as keyof typeof this.order.steps];
+    if (!stepData?.completedAt) return '';
+    const d = new Date(stepData.completedAt);
+    const dateStr = d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
+    const timeStr = d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+    return `${dateStr} ${timeStr}`;
+  }
+
+  getCompletedBy(stepId: string): string {
+    if (!this.order) return '';
+    return this.order.steps?.[stepId as keyof typeof this.order.steps]?.completedBy || '';
+  }
+
+  getAllowedRoleLabel(stepId: string): string {
+    const step = this.steps.find(s => s.id === stepId);
+    if (!step) return '';
+    const roleMeta = ROLES_META.find(r => r.role === step.allowedRole);
+    return roleMeta?.roleLabel || '';
+  }
+
+  formatDate(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  formatTime(dateStr: string): string {
+    const date = new Date(dateStr);
+    return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // Step completion
+  onCompleteStep(step: StepConfig): void {
+    this.confirmIcon = '✅';
+    this.confirmText = `هل تريد تأكيد إتمام مرحلة "${step.label}"؟`;
+    this.confirmLabel = 'تأكيد الإتمام';
+    this.confirmIsDanger = false;
+    this.confirmAction = () => {
+      this.loadingStepId = step.id;
+      this.ordersService.completeStep(this.order!.orderId, step.id).subscribe({
+        next: (updatedOrder) => {
+          this.order = updatedOrder;
+          this.loadingStepId = null;
+          this.displayToast(`تم إتمام مرحلة "${step.label}" بنجاح ✓`, 'success');
+          if (this.selectedStepIndex < this.steps.length - 1) {
+            this.selectedStepIndex++;
+          }
+        },
+        error: (err) => {
+          this.loadingStepId = null;
+          this.displayToast('خطأ: ' + (err.error?.message || 'حدث خطأ'), 'error');
+        }
+      });
+    };
+    this.showConfirmModal = true;
+  }
+
+  // Delete order
+  onDeleteOrder(): void {
+    if (!this.order) return;
+    this.confirmIcon = '🗑️';
+    this.confirmText = `هل أنت متأكد من حذف الطلب #${this.order.orderId}؟ لا يمكن التراجع عن هذا الإجراء.`;
+    this.confirmLabel = 'حذف الطلب';
+    this.confirmIsDanger = true;
+    this.confirmAction = () => {
+      this.ordersService.deleteOrder(this.order!.orderId).subscribe({
+        next: () => {
+          this.displayToast(`تم حذف الطلب #${this.order!.orderId}`, 'success');
+          this.router.navigate(['/dashboard']);
+        },
+        error: () => {
+          this.displayToast('خطأ في حذف الطلب', 'error');
+        }
+      });
+    };
+    this.showConfirmModal = true;
+  }
+
+  // Confirm modal
+  executeConfirm(): void {
+    this.showConfirmModal = false;
+    if (this.confirmAction) this.confirmAction();
+  }
+
+  closeConfirmModal(): void {
+    this.showConfirmModal = false;
+    this.confirmAction = null;
+  }
+
+  displayToast(message: string, type: string): void {
+    this.toastMessage = message;
+    this.toastType = type;
+    this.showToast = true;
+    setTimeout(() => { this.showToast = false; }, 3200);
+  }
+}

@@ -1,0 +1,184 @@
+<!-- Toast -->
+<div class="toast-container" *ngIf="showToast">
+  <div class="toast" [class.success]="toastType === 'success'" [class.error]="toastType === 'error'">
+    <span>{{ toastType === 'success' ? '✅' : '❌' }}</span>
+    <span>{{ toastMessage }}</span>
+  </div>
+</div>
+
+<!-- Loading -->
+<div class="detail-page" *ngIf="isLoading">
+  <div class="empty-state" style="padding-top: 120px;">
+    <div class="empty-icon spinning">⏳</div>
+    <h3>جاري تحميل تفاصيل الطلب...</h3>
+  </div>
+</div>
+
+<!-- Content -->
+<div class="detail-page" *ngIf="!isLoading && order">
+  <button class="back-btn" (click)="goBack()">
+    <span>→</span>
+    <span>العودة للطلبات</span>
+  </button>
+
+  <!-- Detail Header -->
+  <div class="detail-header">
+    <div class="detail-header-info">
+      <div class="detail-title-row">
+        <h2>
+          <span>طلب رقم</span>
+          <span class="order-num">#{{ order.orderId }}</span>
+        </h2>
+        <span class="customer-badge">👤 {{ order.customerName || 'عميل نقدي' }}</span>
+      </div>
+      <div class="order-desc-box">
+        <span class="desc-icon">🪟</span>
+        <span class="desc-label">المواصفات:</span>
+        <span class="desc-val">{{ order.orderDetails || 'زجاج متنوع' }}</span>
+      </div>
+      <p class="detail-date">📅 {{ formatDate(order.createdAt) }} — {{ formatTime(order.createdAt) }}</p>
+    </div>
+    <div class="detail-header-status">
+      <span
+        class="order-status-badge {{ getBadgeClass() }}"
+        style="font-size: 0.9rem; padding: 8px 20px;"
+      >{{ getStatusLabel() }}</span>
+      <button
+        class="btn-delete-order"
+        *ngIf="auth.canDeleteOrder()"
+        (click)="onDeleteOrder()"
+        title="حذف الطلب"
+      >🗑️ حذف الطلب</button>
+    </div>
+  </div>
+
+  <!-- Horizontal Stepper (Interactive Tab Navigator) -->
+  <div class="stepper-horizontal-card">
+    <div class="horizontal-stepper">
+      <ng-container *ngFor="let step of steps; let idx = index; let last = last">
+        <!-- Step Node (Clickable Tab) -->
+        <div
+          class="stepper-node clickable-tab"
+          [class.done]="isStepDone(step.id)"
+          [class.active]="isActiveStep(idx)"
+          [class.pending]="!isStepDone(step.id) && !isActiveStep(idx)"
+          [class.tab-selected]="selectedStepIndex === idx"
+          (click)="selectStep(idx)"
+          title="انقر لعرض مرحلة {{ step.label }}"
+        >
+          <div class="node-circle">
+            @if (isStepDone(step.id)) {
+              <span class="node-check">✓</span>
+            } @else {
+              <span class="node-num">{{ step.stepNumber }}</span>
+            }
+          </div>
+          <div class="node-labels">
+            <span class="node-title">{{ step.label }}</span>
+            <span class="node-status-sub">{{ getStepStatusText(idx) }}</span>
+          </div>
+        </div>
+
+        <!-- Connecting line segment between nodes -->
+        <div
+          *ngIf="!last"
+          class="stepper-connector-line"
+          [class.done]="isStepDone(step.id)"
+        ></div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Single Selected Step Tab View -->
+  <div class="single-step-tab-wrapper">
+    <div class="step-card single-card {{ getStepClass(selectedStepIndex) }}">
+      <div class="step-card-header">
+        <div class="step-card-title">
+          <div class="step-card-num">{{ currentSelectedStep.stepNumber }}</div>
+          <div>
+            <h3>المرحلة {{ currentSelectedStep.stepNumber }}: {{ currentSelectedStep.label }}</h3>
+            <p class="step-card-desc">{{ currentSelectedStep.description }}</p>
+          </div>
+        </div>
+        <span class="step-status-pill {{ getStepStatusClass(selectedStepIndex) }}">
+          {{ getStepStatusText(selectedStepIndex) }}
+        </span>
+      </div>
+
+      <!-- Completed Info -->
+      <div class="step-completed-info" *ngIf="isStepDone(currentSelectedStep.id)">
+        <span class="check-icon">✅</span>
+        <div>
+          <div class="comp-by">تم الإنجاز بواسطة: <strong>{{ getCompletedBy(currentSelectedStep.id) }}</strong></div>
+          <div class="comp-date">🕒 {{ getCompletedDate(currentSelectedStep.id) }}</div>
+        </div>
+      </div>
+
+      <!-- Action Button (Active Step & Has Permission) -->
+      <div class="step-card-actions" *ngIf="isActiveStep(selectedStepIndex) && !isStepDone(currentSelectedStep.id) && canComplete(currentSelectedStep.id)">
+        <button
+          class="btn btn-success btn-full btn-large"
+          (click)="onCompleteStep(currentSelectedStep)"
+          [disabled]="loadingStepId === currentSelectedStep.id"
+        >
+          <span *ngIf="loadingStepId !== currentSelectedStep.id">✓ تأكيد إتمام مرحلة {{ currentSelectedStep.label }}</span>
+          <span *ngIf="loadingStepId === currentSelectedStep.id">⏳ جاري الحفظ...</span>
+        </button>
+      </div>
+
+      <!-- Waiting / Role Lock (Active Step & No Permission) -->
+      <div class="step-card-actions" *ngIf="isActiveStep(selectedStepIndex) && !isStepDone(currentSelectedStep.id) && !canComplete(currentSelectedStep.id)">
+        <div class="role-lock-msg">
+          <span>🔒</span>
+          <span>يتطلب صلاحية: <strong>{{ getAllowedRoleLabel(currentSelectedStep.id) }}</strong></span>
+        </div>
+      </div>
+
+      <!-- Pending previous steps -->
+      <div class="step-card-actions" *ngIf="!isActiveStep(selectedStepIndex) && !isStepDone(currentSelectedStep.id)">
+        <div class="step-waiting-msg">
+          <span>⏳ في انتظار إتمام المراحل السابقة أولاً</span>
+        </div>
+      </div>
+
+      <!-- Tab Navigation Footer -->
+      <div class="tab-nav-footer">
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="selectStep(selectedStepIndex - 1)"
+          [disabled]="selectedStepIndex === 0"
+        >
+          <span>→</span>
+          <span>المرحلة السابقة</span>
+        </button>
+        <span class="tab-page-indicator">مرحلة {{ selectedStepIndex + 1 }} من {{ steps.length }}</span>
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="selectStep(selectedStepIndex + 1)"
+          [disabled]="selectedStepIndex === steps.length - 1"
+        >
+          <span>المرحلة التالية</span>
+          <span>←</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" *ngIf="showConfirmModal" (click)="closeConfirmModal()">
+  <div class="modal-card confirm-modal" (click)="$event.stopPropagation()">
+    <button class="modal-close" (click)="closeConfirmModal()">✕</button>
+    <div class="confirm-icon">{{ confirmIcon }}</div>
+    <p class="confirm-text">{{ confirmText }}</p>
+    <div class="modal-actions">
+      <button
+        class="btn"
+        [class.btn-success]="!confirmIsDanger"
+        [class.btn-danger]="confirmIsDanger"
+        (click)="executeConfirm()"
+      >{{ confirmLabel }}</button>
+      <button class="btn btn-outline" (click)="closeConfirmModal()">إلغاء</button>
+    </div>
+  </div>
+</div>

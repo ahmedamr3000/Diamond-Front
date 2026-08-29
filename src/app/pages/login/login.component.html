@@ -1,0 +1,62 @@
+<div class="login-page-wrapper">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="logo-icon">🔷</div>
+        <h1>ورشة الزجاج</h1>
+        <p>نظام إدارة الطلبات</p>
+      </div>
+
+      <div class="login-error" [class.show]="showError">
+        <span>⚠️</span>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <form (ngSubmit)="onSubmit()">
+        <div class="form-group">
+          <label for="username">اسم المستخدم</label>
+          <div class="input-wrapper">
+            <input
+              type="text"
+              id="username"
+              [(ngModel)]="username"
+              name="username"
+              placeholder="أدخل اسم المستخدم"
+              autocomplete="username"
+              (input)="clearError()"
+              required
+            />
+            <span class="input-icon">👤</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">كلمة المرور</label>
+          <div class="input-wrapper">
+            <input
+              type="password"
+              id="password"
+              [(ngModel)]="password"
+              name="password"
+              placeholder="أدخل كلمة المرور"
+              autocomplete="current-password"
+              (input)="clearError()"
+              required
+            />
+            <span class="input-icon">🔒</span>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="btn btn-primary btn-full"
+          [disabled]="isLoading"
+        >
+          <span *ngIf="!isLoading">تسجيل الدخول</span>
+          <span *ngIf="!isLoading">→</span>
+          <span *ngIf="isLoading">⏳ جاري تسجيل الدخول...</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

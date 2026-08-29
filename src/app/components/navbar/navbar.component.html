@@ -1,0 +1,20 @@
+<nav class="navbar">
+  <div class="navbar-brand" (click)="goHome()">
+    <div class="brand-icon">🔷</div>
+    <span class="brand-text">Diamond</span>
+  </div>
+  <div class="navbar-end">
+    @if (auth.currentUser; as user) {
+      <div class="user-badge">
+        <div class="avatar">{{ user.displayName.charAt(0) }}</div>
+        <div class="user-info">
+          <span class="user-name">{{ user.displayName }}</span>
+          <span class="user-role">{{ user.roleLabel }}</span>
+        </div>
+      </div>
+      <button class="btn-logout" (click)="logout()" title="تسجيل الخروج">
+        🚪
+      </button>
+    }
+  </div>
+</nav>

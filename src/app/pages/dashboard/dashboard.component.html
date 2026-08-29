@@ -1,0 +1,229 @@
+<!-- Toast -->
+<div class="toast-container" *ngIf="showToast">
+  <div class="toast" [class.success]="toastType === 'success'" [class.error]="toastType === 'error'">
+    <span>{{ toastType === 'success' ? '✅' : '❌' }}</span>
+    <span>{{ toastMessage }}</span>
+  </div>
+</div>
+
+<div class="dashboard-page">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <h2>📋 لوحة التحكم</h2>
+      <p class="subtitle" *ngIf="auth.currentUser">
+        مرحباً {{ auth.currentUser.displayName }}! هذه نظرة عامة على الطلبات
+      </p>
+    </div>
+    <button class="btn btn-primary" *ngIf="auth.canCreateOrder()" (click)="openNewOrderModal()">
+      <span>➕</span>
+      <span>طلب جديد</span>
+    </button>
+  </div>
+
+  <!-- Stats Row -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon total">📦</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">إجمالي الطلبات</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon pending-icon">⏳</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.new }}</div>
+        <div class="stat-label">طلبات جديدة</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon active">🔄</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.progress }}</div>
+        <div class="stat-label">قيد التنفيذ</div>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon done">✅</div>
+      <div class="stat-content">
+        <div class="stat-value">{{ stats.done }}</div>
+        <div class="stat-label">مكتملة</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <button class="filter-btn" [class.active]="currentFilter === 'all'" (click)="setFilter('all')">الكل</button>
+    <button class="filter-btn" [class.active]="currentFilter === 'new'" (click)="setFilter('new')">جديد</button>
+    <button class="filter-btn" [class.active]="currentFilter === 'in-progress'" (click)="setFilter('in-progress')">قيد التنفيذ</button>
+    <button class="filter-btn" [class.active]="currentFilter === 'completed'" (click)="setFilter('completed')">مكتمل</button>
+  </div>
+
+  <!-- Loading -->
+  <div class="orders-grid" *ngIf="isLoading">
+    <div class="empty-state">
+      <div class="empty-icon spinning">⏳</div>
+      <h3>جاري تحميل الطلبات...</h3>
+    </div>
+  </div>
+
+  <!-- Error -->
+  <div class="orders-grid" *ngIf="!isLoading && errorMessage">
+    <div class="empty-state">
+      <div class="empty-icon">❌</div>
+      <h3>{{ errorMessage }}</h3>
+    </div>
+  </div>
+
+  <!-- Orders Grid -->
+  <div class="orders-grid" *ngIf="!isLoading && !errorMessage">
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredOrders.length === 0">
+      <div class="empty-icon">📭</div>
+      <h3>{{ currentFilter === 'all' ? 'لا توجد طلبات بعد' : 'لا توجد طلبات في هذه الفئة' }}</h3>
+      <p>{{ auth.canCreateOrder() ? 'اضغط على "طلب جديد" لإنشاء أول طلب' : 'انتظر حتى يتم إنشاء طلبات جديدة' }}</p>
+    </div>
+
+    <!-- Order Cards -->
+    <div
+      class="order-card status-{{ getStatus(order) }}"
+      *ngFor="let order of filteredOrders; let i = index"
+      [style.animation-delay]="i * 0.05 + 's'"
+      (click)="openOrder(order.orderId)"
+    >
+      <!-- Line 1: Order ID & Customer Name -->
+      <div class="order-card-header">
+        <div class="order-id-customer">
+          <span class="hash">#{{ order.orderId }}</span>
+          <span class="divider-dash">—</span>
+          <span class="customer-name">{{ order.customerName || 'عميل نقدي' }}</span>
+        </div>
+        <span class="order-status-badge {{ getBadgeClass(getStatus(order)) }}">
+          {{ getStatusLabel(getStatus(order)) }}
+        </span>
+      </div>
+
+      <!-- Line 2: Order Details (الاوردر ايه) -->
+      <div class="order-card-body">
+        <div class="order-details-text">
+          <span class="order-details-icon">🪟</span>
+          <span class="order-details-val">{{ order.orderDetails || 'زجاج متنوع' }}</span>
+        </div>
+
+        <!-- Horizontal Stepper (Matching User Design) -->
+        <div class="card-stepper-wrapper">
+          <div class="card-stepper">
+            <ng-container *ngFor="let step of steps; let idx = index; let last = last">
+              <div
+                class="card-step-node"
+                [class.done]="isStepDone(order, idx)"
+                [class.active]="isActiveStep(order, idx)"
+                [class.pending]="!isStepDone(order, idx) && !isActiveStep(order, idx)"
+              >
+                <div class="step-circle">
+                  @if (isStepDone(order, idx)) {
+                    <span class="step-check">✓</span>
+                  } @else {
+                    <span class="step-num">{{ step.stepNumber }}</span>
+                  }
+                </div>
+                <span class="step-label">{{ step.label }}</span>
+              </div>
+              <div
+                *ngIf="!last"
+                class="card-connector-line"
+                [class.done]="isStepDone(order, idx)"
+              ></div>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Footer -->
+      <div class="order-card-footer">
+        <div class="order-date">
+          <span>📅</span>
+          <span>{{ formatDate(order.createdAt) }} — {{ formatTime(order.createdAt) }}</span>
+        </div>
+        <div class="order-progress-pill">
+          <span>{{ getCompletedCount(order) }} / {{ steps.length }} مراحل</span>
+          <span class="order-arrow">←</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Order Modal -->
+<div class="modal-overlay" *ngIf="showNewOrderModal" (click)="closeNewOrderModal()">
+  <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
+    <button class="modal-close" (click)="closeNewOrderModal()">✕</button>
+    <div class="modal-header-box">
+      <div class="modal-icon">➕</div>
+      <div>
+        <h3>إنشاء طلب جديد</h3>
+        <p class="modal-subtitle">أدخل بيانات العميل وتفاصيل الطلب والمقاسات</p>
+      </div>
+    </div>
+
+    <form (ngSubmit)="confirmCreateOrder()">
+      <div class="form-group">
+        <label for="orderIdInput">رقم الطلب</label>
+        <div class="input-wrapper">
+          <input
+            type="number"
+            id="orderIdInput"
+            [(ngModel)]="newOrderId"
+            name="newOrderId"
+            placeholder="مثال: 11001"
+            required
+          />
+          <span class="input-icon">🔢</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="customerNameInput">اسم العميل <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="customerNameInput"
+            [(ngModel)]="newCustomerName"
+            name="newCustomerName"
+            placeholder="مثال: هشام الحسيني"
+            required
+          />
+          <span class="input-icon">👤</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="orderDetailsInput">تفاصيل الطلب / نوع الزجاج <span class="required">*</span></label>
+        <div class="input-wrapper">
+          <input
+            type="text"
+            id="orderDetailsInput"
+            [(ngModel)]="newOrderDetails"
+            name="newOrderDetails"
+            placeholder="مثال: عاكس بني + شفاف"
+            required
+          />
+          <span class="input-icon">🪟</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="isCreating || !newCustomerName.trim() || !newOrderDetails.trim()"
+        >
+          {{ isCreating ? '⏳ جاري الإنشاء...' : '✓ إنشاء الطلب' }}
+        </button>
+        <button type="button" class="btn btn-outline" (click)="closeNewOrderModal()">إلغاء</button>
+      </div>
+    </form>
+  </div>
+</div>
