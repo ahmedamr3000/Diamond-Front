@@ -173,6 +173,27 @@ export class OrdersService {
     );
   }
 
+  updateOrder(orderId: number, payload: { customerName?: string; orderDetails?: string }): Observable<Order> {
+    return this.http.put<{ success: boolean; order: Order }>(`${API_URL}/orders/${orderId}`, {
+      role: this.auth.currentUser?.role,
+      customerName: payload.customerName,
+      orderDetails: payload.orderDetails
+    }).pipe(
+      map(res => this.normalizeOrder(res.order)),
+      catchError(() => {
+        const orders = this.getLocalOrders();
+        const order = orders.find(o => o.orderId === orderId);
+        if (order) {
+          if (payload.customerName !== undefined) order.customerName = payload.customerName;
+          if (payload.orderDetails !== undefined) order.orderDetails = payload.orderDetails;
+          this.saveLocalOrders(orders);
+          return of(this.normalizeOrder(order));
+        }
+        throw new Error('تعذر تعديل الطلب');
+      })
+    );
+  }
+
   deleteOrder(orderId: number): Observable<any> {
     return this.http.request('DELETE', `${API_URL}/orders/${orderId}`, {
       body: { role: this.auth.currentUser?.role }

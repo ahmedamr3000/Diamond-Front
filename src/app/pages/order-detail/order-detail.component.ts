@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { OrdersService } from '../../services/orders.service';
@@ -9,7 +10,7 @@ import { ROLES_META } from '../../models/user.model';
 @Component({
   selector: 'app-order-detail',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './order-detail.component.html',
   styleUrl: './order-detail.component.css'
 })
@@ -18,6 +19,12 @@ export class OrderDetailComponent implements OnInit {
   isLoading = true;
   steps = STEPS_CONFIG;
   selectedStepIndex = 0;
+
+  // Edit Order Modal
+  showEditModal = false;
+  editCustomerName = '';
+  editOrderDetails = '';
+  isUpdating = false;
 
   // Confirm modal
   showConfirmModal = false;
@@ -213,6 +220,43 @@ export class OrderDetailComponent implements OnInit {
       });
     };
     this.showConfirmModal = true;
+  }
+
+  // Edit order modal
+  openEditModal(): void {
+    if (!this.order) return;
+    this.editCustomerName = this.order.customerName || '';
+    this.editOrderDetails = this.order.orderDetails || '';
+    this.showEditModal = true;
+  }
+
+  closeEditModal(): void {
+    this.showEditModal = false;
+    this.isUpdating = false;
+  }
+
+  confirmUpdateOrder(): void {
+    if (!this.order) return;
+    if (!this.editCustomerName.trim() || !this.editOrderDetails.trim()) {
+      this.displayToast('يرجى كتابة اسم العميل وتفاصيل الطلب', 'error');
+      return;
+    }
+
+    this.isUpdating = true;
+    this.ordersService.updateOrder(this.order.orderId, {
+      customerName: this.editCustomerName.trim(),
+      orderDetails: this.editOrderDetails.trim()
+    }).subscribe({
+      next: (updatedOrder) => {
+        this.order = updatedOrder;
+        this.closeEditModal();
+        this.displayToast('تم تعديل بيانات الطلب بنجاح ✓', 'success');
+      },
+      error: () => {
+        this.isUpdating = false;
+        this.displayToast('خطأ في تعديل بيانات الطلب', 'error');
+      }
+    });
   }
 
   // Delete order
