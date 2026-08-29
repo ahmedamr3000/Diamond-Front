@@ -17,6 +17,7 @@ export class DashboardComponent implements OnInit {
   orders: Order[] = [];
   filteredOrders: Order[] = [];
   currentFilter = 'all';
+  searchQuery = '';
   isLoading = true;
   errorMessage = '';
 
@@ -78,11 +79,35 @@ export class DashboardComponent implements OnInit {
   }
 
   applyFilter(): void {
-    if (this.currentFilter === 'all') {
-      this.filteredOrders = [...this.orders];
-    } else {
-      this.filteredOrders = this.orders.filter(o => this.ordersService.getStatus(o) === this.currentFilter);
+    let result = [...this.orders];
+
+    // 1. Status Filter
+    if (this.currentFilter !== 'all') {
+      result = result.filter(o => this.ordersService.getStatus(o) === this.currentFilter);
     }
+
+    // 2. Multi-field Search Filter: Order ID OR Customer Name OR Order Details
+    const query = this.searchQuery.trim().toLowerCase();
+    if (query) {
+      result = result.filter(o => {
+        const idStr = (o.orderId || '').toString().toLowerCase();
+        const custName = (o.customerName || '').toLowerCase();
+        const details = (o.orderDetails || '').toLowerCase();
+
+        return idStr.includes(query) || custName.includes(query) || details.includes(query);
+      });
+    }
+
+    this.filteredOrders = result;
+  }
+
+  onSearchChange(): void {
+    this.applyFilter();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.applyFilter();
   }
 
   getStatus(order: Order): string {

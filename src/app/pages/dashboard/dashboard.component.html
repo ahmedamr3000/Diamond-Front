@@ -53,12 +53,44 @@
     </div>
   </div>
 
-  <!-- Filter Bar -->
-  <div class="filter-bar">
-    <button class="filter-btn" [class.active]="currentFilter === 'all'" (click)="setFilter('all')">الكل</button>
-    <button class="filter-btn" [class.active]="currentFilter === 'new'" (click)="setFilter('new')">جديد</button>
-    <button class="filter-btn" [class.active]="currentFilter === 'in-progress'" (click)="setFilter('in-progress')">قيد التنفيذ</button>
-    <button class="filter-btn" [class.active]="currentFilter === 'completed'" (click)="setFilter('completed')">مكتمل</button>
+  <!-- Search & Filter Controls -->
+  <div class="dashboard-controls-section">
+    <div class="search-input-box">
+      <svg class="search-svg-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="🔍 ابحث برقم الطلب (#11001) أو اسم العميل أو المواصفات..."
+        [(ngModel)]="searchQuery"
+        (input)="onSearchChange()"
+      />
+      <button
+        *ngIf="searchQuery"
+        type="button"
+        class="clear-search-btn"
+        (click)="clearSearch()"
+        title="مسح البحث"
+      >✕</button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <button class="filter-btn" [class.active]="currentFilter === 'all'" (click)="setFilter('all')">
+        الكل <span class="filter-count">({{ stats.total }})</span>
+      </button>
+      <button class="filter-btn" [class.active]="currentFilter === 'new'" (click)="setFilter('new')">
+        جديد <span class="filter-count">({{ stats.new }})</span>
+      </button>
+      <button class="filter-btn" [class.active]="currentFilter === 'in-progress'" (click)="setFilter('in-progress')">
+        قيد التنفيذ <span class="filter-count">({{ stats.progress }})</span>
+      </button>
+      <button class="filter-btn" [class.active]="currentFilter === 'completed'" (click)="setFilter('completed')">
+        مكتمل <span class="filter-count">({{ stats.done }})</span>
+      </button>
+    </div>
   </div>
 
   <!-- Loading -->
@@ -81,9 +113,11 @@
   <div class="orders-grid" *ngIf="!isLoading && !errorMessage">
     <!-- Empty State -->
     <div class="empty-state" *ngIf="filteredOrders.length === 0">
-      <div class="empty-icon">📭</div>
-      <h3>{{ currentFilter === 'all' ? 'لا توجد طلبات بعد' : 'لا توجد طلبات في هذه الفئة' }}</h3>
-      <p>{{ auth.canCreateOrder() ? 'اضغط على "طلب جديد" لإنشاء أول طلب' : 'انتظر حتى يتم إنشاء طلبات جديدة' }}</p>
+      <div class="empty-icon">🔍</div>
+      <h3 *ngIf="searchQuery">لا توجد نتائج مطابقة لـ "{{ searchQuery }}"</h3>
+      <h3 *ngIf="!searchQuery">{{ currentFilter === 'all' ? 'لا توجد طلبات بعد' : 'لا توجد طلبات في هذه الفئة' }}</h3>
+      <p *ngIf="searchQuery">تأكد من كتابة رقم الطلب أو اسم العميل أو نوع الزجاج بشكل صحيح</p>
+      <p *ngIf="!searchQuery">{{ auth.canCreateOrder() ? 'اضغط على "طلب جديد" لإنشاء أول طلب' : 'انتظر حتى يتم إنشاء طلبات جديدة' }}</p>
     </div>
 
     <!-- Order Cards -->
