@@ -96,20 +96,31 @@
       <!-- Line 1: Order ID & Customer Name -->
       <div class="order-card-header">
         <div class="order-id-customer">
-          <span class="hash">#{{ order.orderId }}</span>
-          <span class="divider-dash">—</span>
-          <span class="customer-name">{{ order.customerName || 'عميل نقدي' }}</span>
+          <span class="order-id-val">#{{ order.orderId }}</span>
+          <span class="customer-tag">
+            <span class="tag-label">العميل:</span>
+            <span class="tag-name">{{ order.customerName || 'عميل نقدي' }}</span>
+          </span>
         </div>
         <span class="order-status-badge {{ getBadgeClass(getStatus(order)) }}">
           {{ getStatusLabel(getStatus(order)) }}
         </span>
       </div>
 
-      <!-- Line 2: Order Details (الاوردر ايه) -->
+      <!-- Line 2: Order Details (الدسكربشن) -->
       <div class="order-card-body">
         <div class="order-details-text">
-          <span class="order-details-icon">🪟</span>
-          <span class="order-details-val">{{ order.orderDetails || 'زجاج متنوع' }}</span>
+          <div class="order-details-icon-box">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 9h18"/>
+              <path d="M9 21V9"/>
+            </svg>
+          </div>
+          <div class="order-details-content">
+            <span class="details-label">المواصفات:</span>
+            <span class="order-details-val">{{ order.orderDetails || 'زجاج متنوع' }}</span>
+          </div>
         </div>
 
         <!-- Horizontal Stepper (Matching User Design) -->

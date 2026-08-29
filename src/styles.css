@@ -434,13 +434,34 @@ body::before {
   box-shadow: var(--shadow-lg);
 }
 
-.order-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.order-id-customer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.order-id-customer .hash { color: var(--accent-secondary); font-family: var(--font-en); font-size: 1.15rem; font-weight: 800; }
-.order-id-customer .divider-dash { color: var(--text-muted); font-weight: 600; }
-.order-id-customer .customer-name { font-size: 1rem; font-weight: 700; color: var(--text-primary); }
+.order-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; gap: 10px; }
+.order-id-customer { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.order-id-customer .order-id-val {
+  color: var(--accent-secondary);
+  font-family: var(--font-en);
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.customer-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-glass);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+}
+.customer-tag .tag-label {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+.customer-tag .tag-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
 
-.order-status-badge { padding: 4px 14px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+.order-status-badge { padding: 4px 14px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
 .badge-new { background: rgba(59, 130, 246, 0.15); color: var(--info); border: 1px solid rgba(59, 130, 246, 0.3); }
 .badge-in-progress { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
 .badge-completed { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
@@ -448,17 +469,37 @@ body::before {
 .order-card-body { margin-bottom: 16px; }
 
 .order-details-text {
-  display: flex; align-items: center; gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-glass);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(6, 182, 212, 0.06);
+  border: 1px solid rgba(6, 182, 212, 0.18);
   padding: 8px 14px;
   border-radius: var(--radius-md);
   margin-bottom: 18px;
-  font-size: 0.88rem;
-  color: #38bdf8;
-  font-weight: 600;
 }
-.order-details-icon { font-size: 1rem; }
+.order-details-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #38bdf8;
+  flex-shrink: 0;
+}
+.order-details-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 0.88rem;
+}
+.order-details-content .details-label {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+.order-details-content .order-details-val {
+  color: #38bdf8;
+  font-weight: 700;
+}
 
 /* Card Horizontal Stepper (Matching User Design) */
 .card-stepper-wrapper {
