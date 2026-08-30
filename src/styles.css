@@ -1151,10 +1151,22 @@ body::before {
 .modal-lg { max-width: 540px; }
 .required { color: var(--danger); }
 
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .form-row-2col {
+    grid-template-columns: 120px 1fr;
+    gap: 10px;
+  }
+}
+
 /* Steps Selector in Modal */
 .steps-selector-group {
-  margin-top: 14px;
-  margin-bottom: 24px;
+  margin-top: 12px;
+  margin-bottom: 18px;
 }
 .steps-selector-title {
   display: flex;
@@ -1168,18 +1180,13 @@ body::before {
 .steps-selector-desc {
   font-size: 0.82rem;
   color: var(--text-secondary);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   line-height: 1.5;
 }
 .steps-checkbox-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-@media (max-width: 540px) {
-  .steps-checkbox-grid {
-    grid-template-columns: 1fr;
-  }
+  gap: 12px;
 }
 .step-checkbox-card {
   display: flex;
@@ -1187,9 +1194,9 @@ body::before {
   justify-content: space-between;
   background: var(--bg-glass);
   border: 1.5px solid var(--border-glass);
-  border-radius: var(--radius-lg);
-  padding: 18px 20px;
-  min-height: 62px;
+  border-radius: var(--radius-md);
+  padding: 13px 16px;
+  min-height: 52px;
   transition: all var(--transition-fast);
   user-select: none;
 }
@@ -1209,12 +1216,12 @@ body::before {
 }
 .step-cb-name {
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   color: var(--text-primary);
 }
 .step-custom-checkbox-box {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-sm);
   border: 2px solid var(--border-glass-hover);
   background: var(--bg-glass);
@@ -1231,7 +1238,7 @@ body::before {
 }
 .box-check-icon {
   color: white;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   line-height: 1;
 }
@@ -1255,12 +1262,20 @@ body::before {
    MODALS
    ============================================ */
 .modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   z-index: 1000;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 20px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   animation: fadeIn 0.2s ease;
 }
 
@@ -1268,10 +1283,31 @@ body::before {
   background: var(--bg-secondary);
   border: 1px solid var(--border-glass);
   border-radius: var(--radius-2xl);
-  width: 100%; max-width: 480px;
-  padding: 36px;
-  animation: modalSlideUp 0.3s ease;
+  width: 100%;
+  max-width: 480px;
+  padding: 32px;
+  margin: auto;
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  animation: modalSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 30px rgba(99, 102, 241, 0.15);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+.modal-card::-webkit-scrollbar {
+  width: 5px;
+}
+.modal-card::-webkit-scrollbar-track {
+  background: transparent;
+}
+.modal-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+.modal-card::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 .modal-card h3 { font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 10px; }
 .modal-card .modal-subtitle { color: var(--text-secondary); font-size: 0.88rem; margin-bottom: 28px; }
@@ -1305,6 +1341,7 @@ body::before {
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; font-size: 1rem;
   transition: all var(--transition-fast);
+  z-index: 10;
 }
 .modal-close:hover { background: rgba(239, 68, 68, 0.1); color: var(--danger); border-color: rgba(239, 68, 68, 0.3); }
 
@@ -1470,10 +1507,116 @@ body::before {
   .tab-card-actions .btn-complete-step { width: 100%; justify-content: center; }
 
   /* Modals */
-  .modal-overlay { padding: 16px; }
-  .modal-card { padding: 22px 18px; width: 100%; max-height: 88vh; }
-  .modal-actions { flex-direction: column-reverse; gap: 8px; }
-  .modal-actions .btn { width: 100%; justify-content: center; }
+  .modal-overlay {
+    padding: 12px;
+  }
+  .modal-card {
+    padding: 24px 20px;
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+    max-height: calc(100vh - 24px);
+    border-radius: var(--radius-xl);
+    margin: auto;
+  }
+  .modal-close {
+    top: 14px;
+    left: 14px;
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+  .modal-header-box {
+    gap: 12px;
+    margin-bottom: 18px;
+    padding-left: 36px;
+  }
+  .modal-header-box .modal-icon {
+    width: 44px;
+    height: 44px;
+    font-size: 1.25rem;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+  }
+  .modal-header-box h3 {
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+  .modal-header-box .modal-subtitle {
+    font-size: 0.84rem;
+  }
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .form-group input {
+    padding: 12px 42px 12px 14px;
+    font-size: 16px; /* Prevents auto-zoom on iOS Safari */
+    min-height: 48px;
+    border-radius: var(--radius-md);
+  }
+  .steps-selector-group {
+    margin-top: 10px;
+    margin-bottom: 16px;
+  }
+  .steps-selector-title {
+    font-size: 0.92rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .steps-selector-desc {
+    font-size: 0.8rem;
+    margin-bottom: 8px;
+  }
+  .steps-checkbox-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .step-checkbox-card {
+    padding: 12px 14px;
+    min-height: 50px;
+    border-radius: var(--radius-md);
+  }
+  .step-cb-name {
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .step-custom-checkbox-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+  .modal-actions {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .modal-actions .btn {
+    width: auto;
+    padding: 12px 18px;
+    font-size: 0.96rem;
+    min-height: 46px;
+    border-radius: var(--radius-md);
+    justify-content: center;
+  }
+  .modal-actions .btn-primary {
+    flex: 1.6;
+  }
+  .modal-actions .btn-outline {
+    flex: 1;
+  }
+  .confirm-modal .confirm-icon {
+    font-size: 2.8rem;
+    margin-bottom: 12px;
+  }
+  .confirm-modal .confirm-text {
+    font-size: 0.9rem;
+    margin-bottom: 18px;
+  }
 
   /* Login Page */
   .login-card { padding: 36px 22px; }
@@ -1483,6 +1626,66 @@ body::before {
   /* Extra Small Devices */
   .navbar { padding: 0 12px; }
   .dashboard-page, .detail-page { padding: 14px 10px 32px; }
+
+  /* Modals Extra Small */
+  .modal-overlay {
+    padding: 10px;
+  }
+  .modal-card {
+    padding: 20px 16px;
+    max-height: calc(100dvh - 20px);
+    max-height: calc(100vh - 20px);
+    border-radius: var(--radius-lg);
+  }
+  .modal-header-box {
+    padding-left: 32px;
+    margin-bottom: 14px;
+    gap: 10px;
+  }
+  .modal-header-box .modal-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.15rem;
+  }
+  .modal-header-box h3 {
+    font-size: 1.15rem;
+  }
+  .modal-header-box .modal-subtitle {
+    font-size: 0.8rem;
+  }
+  .form-group input {
+    padding: 11px 40px 11px 12px;
+    font-size: 16px;
+    min-height: 46px;
+  }
+  .steps-checkbox-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .step-checkbox-card {
+    padding: 10px 12px;
+    min-height: 46px;
+  }
+  .step-cb-name {
+    font-size: 0.88rem;
+  }
+  .step-selection-alert {
+    padding: 8px 10px;
+    font-size: 0.76rem;
+  }
+  .modal-actions {
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .modal-actions .btn {
+    padding: 11px 14px;
+    font-size: 0.92rem;
+    min-height: 44px;
+  }
+  .confirm-modal .confirm-icon {
+    font-size: 2.4rem;
+    margin-bottom: 10px;
+  }
 
   .stats-row { grid-template-columns: repeat(2, 1fr); gap: 8px; }
   .stat-card { padding: 12px 10px; }
