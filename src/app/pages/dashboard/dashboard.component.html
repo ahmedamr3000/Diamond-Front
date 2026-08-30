@@ -271,7 +271,11 @@
 
         <div class="steps-checkbox-grid">
           <!-- Securit (Checkbox) -->
-          <label class="step-checkbox-card clickable" [class.selected]="includeSecurit">
+          <div 
+            class="step-checkbox-card clickable" 
+            [class.selected]="includeSecurit"
+            (click)="toggleSecurit()"
+          >
             <div class="step-card-left">
               <span class="step-cb-icon">🛡️</span>
               <div class="step-cb-info">
@@ -279,18 +283,17 @@
                 <span class="step-cb-sub">معالجة وتقسية حرارية</span>
               </div>
             </div>
-            <div class="step-custom-checkbox">
-              <input
-                type="checkbox"
-                [(ngModel)]="includeSecurit"
-                name="includeSecurit"
-              />
-              <span class="checkmark"></span>
+            <div class="step-custom-checkbox-box" [class.checked]="includeSecurit">
+              <span *ngIf="includeSecurit" class="box-check-icon">✓</span>
             </div>
-          </label>
+          </div>
 
           <!-- Double (Checkbox) -->
-          <label class="step-checkbox-card clickable" [class.selected]="includeDouble">
+          <div 
+            class="step-checkbox-card clickable" 
+            [class.selected]="includeDouble"
+            (click)="toggleDouble()"
+          >
             <div class="step-card-left">
               <span class="step-cb-icon">🪟</span>
               <div class="step-cb-info">
@@ -298,15 +301,10 @@
                 <span class="step-cb-sub">عزل وتجميع طبقات دبل</span>
               </div>
             </div>
-            <div class="step-custom-checkbox">
-              <input
-                type="checkbox"
-                [(ngModel)]="includeDouble"
-                name="includeDouble"
-              />
-              <span class="checkmark"></span>
+            <div class="step-custom-checkbox-box" [class.checked]="includeDouble">
+              <span *ngIf="includeDouble" class="box-check-icon">✓</span>
             </div>
-          </label>
+          </div>
         </div>
 
         <!-- Warning if both Securit & Double unchecked -->

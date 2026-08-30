@@ -7,7 +7,14 @@ import { environment } from '../../environments/environment';
 
 const LOCAL_STORAGE_KEY = 'gw_orders_v3';
 
-const API_URL = (environment.apiUrl || '').replace(/\/+$/, '');
+function getApiUrl(): string {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://diamond-back-end-wine.vercel.app/api';
+  }
+  return (environment.apiUrl || 'http://localhost:5000/api').replace(/\/+$/, '');
+}
+
+const API_URL = getApiUrl();
 
 @Injectable({
   providedIn: 'root'
@@ -82,7 +89,14 @@ export class OrdersService {
     // Determine selectedSteps
     let selectedSteps: string[] = order.selectedSteps;
     if (!selectedSteps || !Array.isArray(selectedSteps) || selectedSteps.length === 0) {
-      selectedSteps = ['cutting', 'securit', 'double', 'delivery'];
+      const available: string[] = ['cutting'];
+      if (steps.securit || steps.welding) available.push('securit');
+      if (steps.double || steps.finishing) available.push('double');
+      if (!available.includes('securit') && !available.includes('double')) {
+        available.push('securit', 'double');
+      }
+      available.push('delivery');
+      selectedSteps = available;
     }
 
     const normalizedSteps: Record<string, any> = {};

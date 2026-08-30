@@ -5,7 +5,14 @@ import { User, DEFAULT_USERS } from '../models/user.model';
 import { STEPS_CONFIG } from '../models/order.model';
 import { environment } from '../../environments/environment';
 
-const API_URL = (environment.apiUrl || '').replace(/\/+$/, '');
+function getApiUrl(): string {
+  if (typeof window !== 'undefined' && window.location && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://diamond-back-end-wine.vercel.app/api';
+  }
+  return (environment.apiUrl || 'http://localhost:5000/api').replace(/\/+$/, '');
+}
+
+const API_URL = getApiUrl();
 
 @Injectable({
   providedIn: 'root'

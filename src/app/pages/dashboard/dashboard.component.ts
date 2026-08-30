@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -13,7 +13,7 @@ import { Order, ALL_STEPS_CONFIG, StepConfig } from '../../models/order.model';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit {
   orders: Order[] = [];
   filteredOrders: Order[] = [];
   currentFilter = 'all';
@@ -38,7 +38,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
   showToast = false;
 
   allSteps = ALL_STEPS_CONFIG;
-  private pollTimer: any = null;
 
   constructor(
     public auth: AuthService,
@@ -48,16 +47,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.loadOrders(true);
-    // Background real-time polling every 6 seconds to sync across browsers
-    this.pollTimer = setInterval(() => {
-      this.pollOrders();
-    }, 6000);
   }
 
-  ngOnDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-    }
+  toggleSecurit(): void {
+    this.includeSecurit = !this.includeSecurit;
+  }
+
+  toggleDouble(): void {
+    this.includeDouble = !this.includeDouble;
   }
 
   get isValidStepSelection(): boolean {
@@ -78,18 +75,6 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.errorMessage = 'حدث خطأ في تحميل الطلبات';
         this.isLoading = false;
       }
-    });
-  }
-
-  private pollOrders(): void {
-    if (this.isCreating) return;
-    this.ordersService.fetchAll().subscribe({
-      next: (orders) => {
-        this.orders = orders;
-        this.updateStats();
-        this.applyFilter();
-      },
-      error: () => {}
     });
   }
 

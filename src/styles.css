@@ -1228,18 +1228,28 @@ body::before {
   font-size: 0.76rem;
   color: var(--text-muted);
 }
-.step-custom-checkbox {
-  position: relative;
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
+.step-custom-checkbox-box {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-glass-hover);
+  background: var(--bg-glass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  transition: all var(--transition-fast);
 }
-.step-custom-checkbox input[type="checkbox"] {
-  width: 22px;
-  height: 22px;
-  cursor: pointer;
-  accent-color: var(--accent-primary);
+.step-custom-checkbox-box.checked {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 10px var(--accent-primary-glow);
+}
+.box-check-icon {
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
 }
 .step-selection-alert {
   margin-top: 10px;

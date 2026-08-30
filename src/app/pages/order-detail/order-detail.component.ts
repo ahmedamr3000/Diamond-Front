@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -14,7 +14,7 @@ import { ROLES_META } from '../../models/user.model';
   templateUrl: './order-detail.component.html',
   styleUrl: './order-detail.component.css'
 })
-export class OrderDetailComponent implements OnInit, OnDestroy {
+export class OrderDetailComponent implements OnInit {
   order: Order | null = null;
   isLoading = true;
   selectedStepIndex = 0;
@@ -40,7 +40,6 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
 
   // Button loading states
   loadingStepId: string | null = null;
-  private pollTimer: any = null;
 
   constructor(
     public auth: AuthService,
@@ -56,19 +55,6 @@ export class OrderDetailComponent implements OnInit, OnDestroy {
       return;
     }
     this.loadOrder(id, true);
-
-    // Background polling every 6 seconds to sync across browsers
-    this.pollTimer = setInterval(() => {
-      if (this.order && !this.loadingStepId && !this.isUpdating) {
-        this.loadOrder(this.order.orderId, false);
-      }
-    }, 6000);
-  }
-
-  ngOnDestroy(): void {
-    if (this.pollTimer) {
-      clearInterval(this.pollTimer);
-    }
   }
 
   get steps(): StepConfig[] {
