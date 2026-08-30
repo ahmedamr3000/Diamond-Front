@@ -266,28 +266,16 @@
           <span class="required">*</span>
         </label>
         <p class="steps-selector-desc">
-          مرحلتا التقطيع والتسليم أساسيتان، ويجب تفعيل مرحلة واحدة على الأقل بين (سيكوريت) أو (دبل):
+          (التقطيع والتسليم مضافتان تلقائياً)، يرجى اختيار مرحلة واحدة على الأقل:
         </p>
 
         <div class="steps-checkbox-grid">
-          <!-- 1. Cutting (Mandatory) -->
-          <div class="step-checkbox-card locked-mandatory">
-            <div class="step-card-left">
-              <span class="step-cb-icon">✂️</span>
-              <div class="step-cb-info">
-                <span class="step-cb-name">1. مرحلة التقطيع</span>
-                <span class="step-cb-sub">قص وتجهيز الزجاج</span>
-              </div>
-            </div>
-            <div class="step-mandatory-pill">أساسية ✓</div>
-          </div>
-
-          <!-- 2. Securit (Checkbox) -->
+          <!-- Securit (Checkbox) -->
           <label class="step-checkbox-card clickable" [class.selected]="includeSecurit">
             <div class="step-card-left">
               <span class="step-cb-icon">🛡️</span>
               <div class="step-cb-info">
-                <span class="step-cb-name">2. مرحلة السيكوريت</span>
+                <span class="step-cb-name">مرحلة السيكوريت</span>
                 <span class="step-cb-sub">معالجة وتقسية حرارية</span>
               </div>
             </div>
@@ -301,12 +289,12 @@
             </div>
           </label>
 
-          <!-- 3. Double (Checkbox) -->
+          <!-- Double (Checkbox) -->
           <label class="step-checkbox-card clickable" [class.selected]="includeDouble">
             <div class="step-card-left">
               <span class="step-cb-icon">🪟</span>
               <div class="step-cb-info">
-                <span class="step-cb-name">3. مرحلة الدبل</span>
+                <span class="step-cb-name">مرحلة الدبل</span>
                 <span class="step-cb-sub">عزل وتجميع طبقات دبل</span>
               </div>
             </div>
@@ -319,24 +307,12 @@
               <span class="checkmark"></span>
             </div>
           </label>
-
-          <!-- 4. Delivery (Mandatory) -->
-          <div class="step-checkbox-card locked-mandatory">
-            <div class="step-card-left">
-              <span class="step-cb-icon">🚚</span>
-              <div class="step-cb-info">
-                <span class="step-cb-name">4. مرحلة التسليم</span>
-                <span class="step-cb-sub">فحص نهائي وتجهيز التسليم</span>
-              </div>
-            </div>
-            <div class="step-mandatory-pill">أساسية ✓</div>
-          </div>
         </div>
 
         <!-- Warning if both Securit & Double unchecked -->
         <div class="step-selection-alert error" *ngIf="!isValidStepSelection">
           <span>⚠️</span>
-          <span>يجب اختيار مرحلة واحدة على الأقل بين (سيكوريت) أو (دبل) لإنشاء الطلب!</span>
+          <span>يجب اختيار مرحلة واحدة على الأقل بين (السيكوريت) أو (الدبل) لإنشاء الطلب!</span>
         </div>
       </div>
 
