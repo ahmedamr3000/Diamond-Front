@@ -276,13 +276,7 @@
             [class.selected]="includeSecurit"
             (click)="toggleSecurit()"
           >
-            <div class="step-card-left">
-              <span class="step-cb-icon">🛡️</span>
-              <div class="step-cb-info">
-                <span class="step-cb-name">مرحلة السيكوريت</span>
-                <span class="step-cb-sub">معالجة وتقسية حرارية</span>
-              </div>
-            </div>
+            <span class="step-cb-name">مرحلة السيكوريت</span>
             <div class="step-custom-checkbox-box" [class.checked]="includeSecurit">
               <span *ngIf="includeSecurit" class="box-check-icon">✓</span>
             </div>
@@ -294,13 +288,7 @@
             [class.selected]="includeDouble"
             (click)="toggleDouble()"
           >
-            <div class="step-card-left">
-              <span class="step-cb-icon">🪟</span>
-              <div class="step-cb-info">
-                <span class="step-cb-name">مرحلة الدبل</span>
-                <span class="step-cb-sub">عزل وتجميع طبقات دبل</span>
-              </div>
-            </div>
+            <span class="step-cb-name">مرحلة الدبل</span>
             <div class="step-custom-checkbox-box" [class.checked]="includeDouble">
               <span *ngIf="includeDouble" class="box-check-icon">✓</span>
             </div>
