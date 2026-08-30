@@ -5,7 +5,7 @@ import { User, DEFAULT_USERS } from '../models/user.model';
 import { STEPS_CONFIG } from '../models/order.model';
 import { environment } from '../../environments/environment';
 
-const API_URL = environment.apiUrl;
+const API_URL = (environment.apiUrl || '').replace(/\/+$/, '');
 
 @Injectable({
   providedIn: 'root'

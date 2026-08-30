@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { OrdersService } from '../../services/orders.service';
-import { Order, STEPS_CONFIG, StepConfig } from '../../models/order.model';
+import { Order, ALL_STEPS_CONFIG, StepConfig } from '../../models/order.model';
 import { ROLES_META } from '../../models/user.model';
 
 @Component({
@@ -14,10 +14,9 @@ import { ROLES_META } from '../../models/user.model';
   templateUrl: './order-detail.component.html',
   styleUrl: './order-detail.component.css'
 })
-export class OrderDetailComponent implements OnInit {
+export class OrderDetailComponent implements OnInit, OnDestroy {
   order: Order | null = null;
   isLoading = true;
-  steps = STEPS_CONFIG;
   selectedStepIndex = 0;
 
   // Edit Order Modal
@@ -41,6 +40,7 @@ export class OrderDetailComponent implements OnInit {
 
   // Button loading states
   loadingStepId: string | null = null;
+  private pollTimer: any = null;
 
   constructor(
     public auth: AuthService,
@@ -55,32 +55,60 @@ export class OrderDetailComponent implements OnInit {
       this.router.navigate(['/dashboard']);
       return;
     }
-    this.loadOrder(id);
+    this.loadOrder(id, true);
+
+    // Background polling every 6 seconds to sync across browsers
+    this.pollTimer = setInterval(() => {
+      if (this.order && !this.loadingStepId && !this.isUpdating) {
+        this.loadOrder(this.order.orderId, false);
+      }
+    }, 6000);
   }
 
-  loadOrder(orderId: number): void {
-    this.isLoading = true;
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+  }
+
+  get steps(): StepConfig[] {
+    return this.ordersService.getOrderSteps(this.order);
+  }
+
+  loadOrder(orderId: number, showSpinner: boolean = true): void {
+    if (showSpinner) this.isLoading = true;
     this.ordersService.fetchById(orderId).subscribe({
       next: (order) => {
         this.order = order;
         this.isLoading = false;
-        // Auto-select the active step (or last step if all done)
-        const activeIdx = this.getActiveStepIndex();
-        this.selectedStepIndex = activeIdx < this.steps.length ? activeIdx : this.steps.length - 1;
+        // Auto-select the active step (or last step if all done) on initial load
+        if (showSpinner) {
+          const activeIdx = this.getActiveStepIndex();
+          this.selectedStepIndex = activeIdx < this.steps.length ? activeIdx : Math.max(0, this.steps.length - 1);
+        } else {
+          // Clamp selectedStepIndex if steps changed
+          if (this.selectedStepIndex >= this.steps.length) {
+            this.selectedStepIndex = Math.max(0, this.steps.length - 1);
+          }
+        }
       },
       error: () => {
-        this.displayToast('خطأ في تحميل الطلب', 'error');
-        this.router.navigate(['/dashboard']);
+        if (showSpinner) {
+          this.displayToast('خطأ في تحميل الطلب', 'error');
+          this.router.navigate(['/dashboard']);
+        }
       }
     });
   }
 
   selectStep(idx: number): void {
-    this.selectedStepIndex = idx;
+    if (idx >= 0 && idx < this.steps.length) {
+      this.selectedStepIndex = idx;
+    }
   }
 
   get currentSelectedStep(): StepConfig {
-    return this.steps[this.selectedStepIndex] || this.steps[0];
+    return this.steps[this.selectedStepIndex] || this.steps[0] || ALL_STEPS_CONFIG[0];
   }
 
   goBack(): void {
@@ -114,19 +142,19 @@ export class OrderDetailComponent implements OnInit {
 
   getFillPercent(): number {
     const completed = this.getCompletedCount();
-    if (completed === 0) return 0;
+    if (completed === 0 || this.steps.length === 0) return 0;
     return (completed / this.steps.length) * 100;
   }
 
   getStepperFillPercent(): number {
     const completed = this.getCompletedCount();
-    if (completed === 0) return 0;
+    if (completed === 0 || this.steps.length <= 1) return 0;
     if (completed >= this.steps.length) return 100;
     return (completed / (this.steps.length - 1)) * 100;
   }
 
   getStepClass(idx: number): string {
-    if (!this.order) return 'pending';
+    if (!this.order || idx >= this.steps.length) return 'pending';
     const step = this.steps[idx];
     const activeIdx = this.getActiveStepIndex();
     if (this.order.steps?.[step.id]?.status === 'done') return 'completed';
@@ -135,7 +163,7 @@ export class OrderDetailComponent implements OnInit {
   }
 
   getStepStatusText(idx: number): string {
-    if (!this.order) return 'في الانتظار';
+    if (!this.order || idx >= this.steps.length) return 'في الانتظار';
     const step = this.steps[idx];
     const activeIdx = this.getActiveStepIndex();
     if (this.order.steps?.[step.id]?.status === 'done') return 'مكتمل ✓';
@@ -144,7 +172,7 @@ export class OrderDetailComponent implements OnInit {
   }
 
   getStepStatusClass(idx: number): string {
-    if (!this.order) return 'pending';
+    if (!this.order || idx >= this.steps.length) return 'pending';
     const step = this.steps[idx];
     const activeIdx = this.getActiveStepIndex();
     if (this.order.steps?.[step.id]?.status === 'done') return 'done';
@@ -153,7 +181,7 @@ export class OrderDetailComponent implements OnInit {
   }
 
   isStepDone(stepId: string): boolean {
-    return this.order?.steps?.[stepId as keyof typeof this.order.steps]?.status === 'done';
+    return this.order?.steps?.[stepId]?.status === 'done';
   }
 
   isActiveStep(idx: number): boolean {
@@ -166,7 +194,7 @@ export class OrderDetailComponent implements OnInit {
 
   getCompletedDate(stepId: string): string {
     if (!this.order) return '';
-    const stepData = this.order.steps?.[stepId as keyof typeof this.order.steps];
+    const stepData = this.order.steps?.[stepId];
     if (!stepData?.completedAt) return '';
     const d = new Date(stepData.completedAt);
     const dateStr = d.toLocaleDateString('ar-EG', { month: 'short', day: 'numeric' });
@@ -176,11 +204,11 @@ export class OrderDetailComponent implements OnInit {
 
   getCompletedBy(stepId: string): string {
     if (!this.order) return '';
-    return this.order.steps?.[stepId as keyof typeof this.order.steps]?.completedBy || '';
+    return this.order.steps?.[stepId]?.completedBy || '';
   }
 
   getAllowedRoleLabel(stepId: string): string {
-    const step = this.steps.find(s => s.id === stepId);
+    const step = ALL_STEPS_CONFIG.find(s => s.id === stepId);
     if (!step) return '';
     const roleMeta = ROLES_META.find(r => r.role === step.allowedRole);
     return roleMeta?.roleLabel || '';
@@ -215,7 +243,7 @@ export class OrderDetailComponent implements OnInit {
         },
         error: (err) => {
           this.loadingStepId = null;
-          this.displayToast('خطأ: ' + (err.error?.message || 'حدث خطأ'), 'error');
+          this.displayToast('خطأ: ' + (err.error?.message || 'حدث خطأ في تحديث المرحلة'), 'error');
         }
       });
     };
@@ -298,3 +326,4 @@ export class OrderDetailComponent implements OnInit {
     setTimeout(() => { this.showToast = false; }, 3200);
   }
 }
+

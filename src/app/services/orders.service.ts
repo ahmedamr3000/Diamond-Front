@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map, catchError, of } from 'rxjs';
-import { Order, STEPS_CONFIG } from '../models/order.model';
+import { Order, ALL_STEPS_CONFIG, STEPS_CONFIG, StepConfig } from '../models/order.model';
 import { AuthService } from './auth.service';
 import { environment } from '../../environments/environment';
 
 const LOCAL_STORAGE_KEY = 'gw_orders_v3';
 
-const API_URL = environment.apiUrl;
+const API_URL = (environment.apiUrl || '').replace(/\/+$/, '');
 
 @Injectable({
   providedIn: 'root'
@@ -26,6 +26,7 @@ export class OrdersService {
           customerName: 'هشام الحسيني',
           orderDetails: 'عاكس بني + شفاف',
           createdAt: new Date().toISOString(),
+          selectedSteps: ['cutting', 'securit', 'double', 'delivery'],
           steps: {
             cutting: { status: 'pending', completedAt: null, completedBy: null },
             securit: { status: 'pending', completedAt: null, completedBy: null },
@@ -38,10 +39,10 @@ export class OrdersService {
           customerName: 'مكتب النور للمقاولات',
           orderDetails: 'سيكوريت 10 مم شفاف واجهات',
           createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+          selectedSteps: ['cutting', 'securit', 'delivery'],
           steps: {
             cutting: { status: 'pending', completedAt: null, completedBy: null },
             securit: { status: 'pending', completedAt: null, completedBy: null },
-            double: { status: 'pending', completedAt: null, completedBy: null },
             delivery: { status: 'pending', completedAt: null, completedBy: null }
           }
         },
@@ -50,9 +51,9 @@ export class OrdersService {
           customerName: 'فيلا المهندس طارق',
           orderDetails: 'دبل 24 مم عاكس رمادي + جورجيا',
           createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+          selectedSteps: ['cutting', 'double', 'delivery'],
           steps: {
             cutting: { status: 'pending', completedAt: null, completedBy: null },
-            securit: { status: 'pending', completedAt: null, completedBy: null },
             double: { status: 'pending', completedAt: null, completedBy: null },
             delivery: { status: 'pending', completedAt: null, completedBy: null }
           }
@@ -77,30 +78,66 @@ export class OrdersService {
   normalizeOrder(order: any): Order {
     if (!order) return order;
     const steps = order.steps || {};
+    
+    // Determine selectedSteps
+    let selectedSteps: string[] = order.selectedSteps;
+    if (!selectedSteps || !Array.isArray(selectedSteps) || selectedSteps.length === 0) {
+      selectedSteps = ['cutting', 'securit', 'double', 'delivery'];
+    }
+
+    const normalizedSteps: Record<string, any> = {};
+    selectedSteps.forEach(stepKey => {
+      if (steps[stepKey]) {
+        normalizedSteps[stepKey] = steps[stepKey];
+      } else if (stepKey === 'securit' && steps.welding) {
+        normalizedSteps[stepKey] = steps.welding;
+      } else if (stepKey === 'double' && steps.finishing) {
+        normalizedSteps[stepKey] = steps.finishing;
+      } else {
+        normalizedSteps[stepKey] = { status: 'pending', completedAt: null, completedBy: null };
+      }
+    });
+
     return {
       ...order,
       customerName: order.customerName || 'عميل نقدي',
       orderDetails: order.orderDetails || 'زجاج متنوع',
-      steps: {
-        cutting: steps.cutting || { status: 'pending', completedAt: null, completedBy: null },
-        securit: steps.securit || steps.welding || { status: 'pending', completedAt: null, completedBy: null },
-        double: steps.double || steps.finishing || { status: 'pending', completedAt: null, completedBy: null },
-        delivery: steps.delivery || { status: 'pending', completedAt: null, completedBy: null },
-      }
+      selectedSteps,
+      steps: normalizedSteps
     };
+  }
+
+  getOrderSteps(order: Order | null | undefined): StepConfig[] {
+    if (!order) return ALL_STEPS_CONFIG;
+    const norm = this.normalizeOrder(order);
+    const selected = (norm.selectedSteps && norm.selectedSteps.length > 0)
+      ? norm.selectedSteps
+      : ['cutting', 'securit', 'double', 'delivery'];
+
+    return selected
+      .map(id => ALL_STEPS_CONFIG.find(s => s.id === id))
+      .filter((s): s is StepConfig => !!s)
+      .map((s, index) => ({
+        ...s,
+        stepNumber: index + 1
+      }));
   }
 
   fetchAll(): Observable<Order[]> {
     return this.http.get<{ success: boolean; orders: Order[] }>(`${API_URL}/orders`).pipe(
       map(res => (res.orders || []).map(o => this.normalizeOrder(o))),
-      catchError(() => of(this.getLocalOrders().map(o => this.normalizeOrder(o))))
+      catchError((err) => {
+        console.warn('Backend fetchAll fallback to local storage:', err);
+        return of(this.getLocalOrders().map(o => this.normalizeOrder(o)));
+      })
     );
   }
 
   fetchById(orderId: number): Observable<Order> {
     return this.http.get<{ success: boolean; order: Order }>(`${API_URL}/orders/${orderId}`).pipe(
       map(res => this.normalizeOrder(res.order)),
-      catchError(() => {
+      catchError((err) => {
+        console.warn('Backend fetchById fallback to local storage:', err);
         const found = this.getLocalOrders().find(o => o.orderId === orderId);
         if (found) return of(this.normalizeOrder(found));
         throw new Error('الطلب غير موجود');
@@ -119,29 +156,34 @@ export class OrdersService {
     );
   }
 
-  create(payload: { orderId?: number; customerName: string; orderDetails: string }): Observable<Order> {
+  create(payload: { orderId?: number; customerName: string; orderDetails: string; selectedSteps?: string[] }): Observable<Order> {
+    const selectedSteps = payload.selectedSteps || ['cutting', 'securit', 'double', 'delivery'];
     return this.http.post<{ success: boolean; order: Order }>(`${API_URL}/orders`, {
       role: this.auth.currentUser?.role,
       orderId: payload.orderId,
       customerName: payload.customerName,
-      orderDetails: payload.orderDetails
+      orderDetails: payload.orderDetails,
+      selectedSteps
     }).pipe(
       map(res => this.normalizeOrder(res.order)),
-      catchError(() => {
+      catchError((err) => {
+        console.warn('Backend create fallback to local storage:', err);
         const orders = this.getLocalOrders();
         const maxId = orders.length > 0 ? Math.max(...orders.map(o => o.orderId)) : 11000;
         const newOrderId = payload.orderId || (maxId + 1);
+
+        const stepsObj: Record<string, any> = {};
+        selectedSteps.forEach(stepKey => {
+          stepsObj[stepKey] = { status: 'pending', completedAt: null, completedBy: null };
+        });
+
         const newOrder: Order = {
           orderId: newOrderId,
           customerName: payload.customerName || 'عميل نقدي',
           orderDetails: payload.orderDetails || 'زجاج متنوع',
           createdAt: new Date().toISOString(),
-          steps: {
-            cutting: { status: 'pending', completedAt: null, completedBy: null },
-            securit: { status: 'pending', completedAt: null, completedBy: null },
-            double: { status: 'pending', completedAt: null, completedBy: null },
-            delivery: { status: 'pending', completedAt: null, completedBy: null }
-          }
+          selectedSteps,
+          steps: stepsObj
         };
         orders.unshift(newOrder);
         this.saveLocalOrders(orders);
@@ -156,11 +198,15 @@ export class OrdersService {
       displayName: this.auth.currentUser?.displayName
     }).pipe(
       map(res => this.normalizeOrder(res.order)),
-      catchError(() => {
+      catchError((err) => {
+        console.warn('Backend completeStep fallback to local storage:', err);
         const orders = this.getLocalOrders();
         const order = orders.find(o => o.orderId === orderId);
-        if (order && order.steps[stepId as keyof typeof order.steps]) {
-          order.steps[stepId as keyof typeof order.steps] = {
+        if (order) {
+          if (!order.steps[stepId]) {
+            order.steps[stepId] = { status: 'pending', completedAt: null, completedBy: null };
+          }
+          order.steps[stepId] = {
             status: 'done',
             completedAt: new Date().toISOString(),
             completedBy: this.auth.currentUser?.displayName || 'المستخدم'
@@ -209,9 +255,9 @@ export class OrdersService {
   // Utility methods
   getStatus(order: Order): 'new' | 'in-progress' | 'completed' {
     const norm = this.normalizeOrder(order);
-    const stepIds = STEPS_CONFIG.map(s => s.id);
-    const allDone = stepIds.every(id => norm.steps?.[id]?.status === 'done');
-    const anyDone = stepIds.some(id => norm.steps?.[id]?.status === 'done');
+    const orderSteps = this.getOrderSteps(norm);
+    const allDone = orderSteps.every(s => norm.steps?.[s.id]?.status === 'done');
+    const anyDone = orderSteps.some(s => norm.steps?.[s.id]?.status === 'done');
     if (allDone) return 'completed';
     if (anyDone) return 'in-progress';
     return 'new';
@@ -219,15 +265,17 @@ export class OrdersService {
 
   getActiveStepIndex(order: Order): number {
     const norm = this.normalizeOrder(order);
-    for (let i = 0; i < STEPS_CONFIG.length; i++) {
-      if (norm.steps?.[STEPS_CONFIG[i].id]?.status !== 'done') return i;
+    const orderSteps = this.getOrderSteps(norm);
+    for (let i = 0; i < orderSteps.length; i++) {
+      if (norm.steps?.[orderSteps[i].id]?.status !== 'done') return i;
     }
-    return STEPS_CONFIG.length;
+    return orderSteps.length;
   }
 
   getCompletedCount(order: Order): number {
     const norm = this.normalizeOrder(order);
-    return STEPS_CONFIG.filter(s => norm.steps?.[s.id]?.status === 'done').length;
+    const orderSteps = this.getOrderSteps(norm);
+    return orderSteps.filter(s => norm.steps?.[s.id]?.status === 'done').length;
   }
 }
 

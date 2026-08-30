@@ -1,10 +1,10 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
 import { OrdersService } from '../../services/orders.service';
-import { Order, STEPS_CONFIG } from '../../models/order.model';
+import { Order, ALL_STEPS_CONFIG, StepConfig } from '../../models/order.model';
 
 @Component({
   selector: 'app-dashboard',
@@ -13,7 +13,7 @@ import { Order, STEPS_CONFIG } from '../../models/order.model';
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.css'
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   orders: Order[] = [];
   filteredOrders: Order[] = [];
   currentFilter = 'all';
@@ -28,6 +28,8 @@ export class DashboardComponent implements OnInit {
   newOrderId: number | null = null;
   newCustomerName = '';
   newOrderDetails = '';
+  includeSecurit = true;
+  includeDouble = true;
   isCreating = false;
 
   // Toast
@@ -35,7 +37,8 @@ export class DashboardComponent implements OnInit {
   toastType = 'success';
   showToast = false;
 
-  steps = STEPS_CONFIG;
+  allSteps = ALL_STEPS_CONFIG;
+  private pollTimer: any = null;
 
   constructor(
     public auth: AuthService,
@@ -44,22 +47,49 @@ export class DashboardComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.loadOrders();
+    this.loadOrders(true);
+    // Background real-time polling every 6 seconds to sync across browsers
+    this.pollTimer = setInterval(() => {
+      this.pollOrders();
+    }, 6000);
   }
 
-  async loadOrders(): Promise<void> {
-    this.isLoading = true;
+  ngOnDestroy(): void {
+    if (this.pollTimer) {
+      clearInterval(this.pollTimer);
+    }
+  }
+
+  get isValidStepSelection(): boolean {
+    return this.includeSecurit || this.includeDouble;
+  }
+
+  loadOrders(showSpinner: boolean = true): void {
+    if (showSpinner) this.isLoading = true;
     this.ordersService.fetchAll().subscribe({
       next: (orders) => {
         this.orders = orders;
         this.updateStats();
         this.applyFilter();
         this.isLoading = false;
+        this.errorMessage = '';
       },
       error: (err) => {
         this.errorMessage = 'حدث خطأ في تحميل الطلبات';
         this.isLoading = false;
       }
+    });
+  }
+
+  private pollOrders(): void {
+    if (this.isCreating) return;
+    this.ordersService.fetchAll().subscribe({
+      next: (orders) => {
+        this.orders = orders;
+        this.updateStats();
+        this.applyFilter();
+      },
+      error: () => {}
     });
   }
 
@@ -114,6 +144,10 @@ export class DashboardComponent implements OnInit {
     return this.ordersService.getStatus(order);
   }
 
+  getOrderSteps(order: Order): StepConfig[] {
+    return this.ordersService.getOrderSteps(order);
+  }
+
   getActiveStepIndex(order: Order): number {
     return this.ordersService.getActiveStepIndex(order);
   }
@@ -122,26 +156,14 @@ export class DashboardComponent implements OnInit {
     return this.ordersService.getCompletedCount(order);
   }
 
-  isStepDone(order: Order, stepIndex: number): boolean {
-    const step = STEPS_CONFIG[stepIndex];
-    return order.steps?.[step.id]?.status === 'done';
+  isStepDone(order: Order, stepId: string): boolean {
+    return order.steps?.[stepId]?.status === 'done';
   }
 
   isActiveStep(order: Order, stepIndex: number): boolean {
-    return stepIndex === this.getActiveStepIndex(order) && !this.isStepDone(order, stepIndex);
-  }
-
-  getStepStatus(order: Order, stepIndex: number): 'done' | 'active' | 'pending' {
-    if (this.isStepDone(order, stepIndex)) return 'done';
-    if (this.isActiveStep(order, stepIndex)) return 'active';
-    return 'pending';
-  }
-
-  getStepperFillPercent(order: Order): number {
-    const completed = this.getCompletedCount(order);
-    if (completed === 0) return 0;
-    if (completed >= this.steps.length) return 100;
-    return (completed / (this.steps.length - 1)) * 100;
+    const orderSteps = this.getOrderSteps(order);
+    const activeIdx = this.getActiveStepIndex(order);
+    return stepIndex === activeIdx && stepIndex < orderSteps.length && !this.isStepDone(order, orderSteps[stepIndex].id);
   }
 
   getStatusLabel(status: string): string {
@@ -172,6 +194,8 @@ export class DashboardComponent implements OnInit {
   openNewOrderModal(): void {
     this.newCustomerName = '';
     this.newOrderDetails = '';
+    this.includeSecurit = true;
+    this.includeDouble = true;
     this.ordersService.getNextId().subscribe({
       next: (id) => {
         this.newOrderId = id;
@@ -195,16 +219,27 @@ export class DashboardComponent implements OnInit {
       return;
     }
 
+    if (!this.isValidStepSelection) {
+      this.displayToast('يجب اختيار مرحلة واحدة على الأقل بين السيكوريت والدبل', 'error');
+      return;
+    }
+
+    const selectedSteps = ['cutting'];
+    if (this.includeSecurit) selectedSteps.push('securit');
+    if (this.includeDouble) selectedSteps.push('double');
+    selectedSteps.push('delivery');
+
     this.isCreating = true;
     this.ordersService.create({
       orderId: this.newOrderId || undefined,
       customerName: this.newCustomerName.trim(),
-      orderDetails: this.newOrderDetails.trim()
+      orderDetails: this.newOrderDetails.trim(),
+      selectedSteps
     }).subscribe({
       next: (order) => {
         this.closeNewOrderModal();
         this.displayToast(`تم إنشاء الطلب #${order.orderId} بنجاح ✓`, 'success');
-        this.loadOrders();
+        this.loadOrders(false);
       },
       error: (err) => {
         this.isCreating = false;
@@ -220,3 +255,4 @@ export class DashboardComponent implements OnInit {
     setTimeout(() => { this.showToast = false; }, 3200);
   }
 }
+

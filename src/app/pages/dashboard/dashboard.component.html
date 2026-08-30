@@ -160,15 +160,15 @@
         <!-- Horizontal Stepper (Matching User Design) -->
         <div class="card-stepper-wrapper">
           <div class="card-stepper">
-            <ng-container *ngFor="let step of steps; let idx = index; let last = last">
+            <ng-container *ngFor="let step of getOrderSteps(order); let idx = index; let last = last">
               <div
                 class="card-step-node"
-                [class.done]="isStepDone(order, idx)"
+                [class.done]="isStepDone(order, step.id)"
                 [class.active]="isActiveStep(order, idx)"
-                [class.pending]="!isStepDone(order, idx) && !isActiveStep(order, idx)"
+                [class.pending]="!isStepDone(order, step.id) && !isActiveStep(order, idx)"
               >
                 <div class="step-circle">
-                  @if (isStepDone(order, idx)) {
+                  @if (isStepDone(order, step.id)) {
                     <span class="step-check">✓</span>
                   } @else {
                     <span class="step-num">{{ step.stepNumber }}</span>
@@ -179,7 +179,7 @@
               <div
                 *ngIf="!last"
                 class="card-connector-line"
-                [class.done]="isStepDone(order, idx)"
+                [class.done]="isStepDone(order, step.id)"
               ></div>
             </ng-container>
           </div>
@@ -193,7 +193,7 @@
           <span>{{ formatDate(order.createdAt) }} — {{ formatTime(order.createdAt) }}</span>
         </div>
         <div class="order-progress-pill">
-          <span>{{ getCompletedCount(order) }} / {{ steps.length }} مراحل</span>
+          <span>{{ getCompletedCount(order) }} / {{ getOrderSteps(order).length }} مراحل</span>
           <span class="order-arrow">←</span>
         </div>
       </div>
@@ -209,7 +209,7 @@
       <div class="modal-icon">➕</div>
       <div>
         <h3>إنشاء طلب جديد</h3>
-        <p class="modal-subtitle">أدخل بيانات العميل وتفاصيل الطلب والمقاسات</p>
+        <p class="modal-subtitle">أدخل بيانات العميل وتفاصيل ومراحل تنفيذ الطلب</p>
       </div>
     </div>
 
@@ -259,11 +259,92 @@
         </div>
       </div>
 
+      <!-- Workflow Steps Customization -->
+      <div class="form-group steps-selector-group">
+        <label class="steps-selector-title">
+          <span>🛠️ تحديد مراحل تنفيذ الطلب</span>
+          <span class="required">*</span>
+        </label>
+        <p class="steps-selector-desc">
+          مرحلتا التقطيع والتسليم أساسيتان، ويجب تفعيل مرحلة واحدة على الأقل بين (سيكوريت) أو (دبل):
+        </p>
+
+        <div class="steps-checkbox-grid">
+          <!-- 1. Cutting (Mandatory) -->
+          <div class="step-checkbox-card locked-mandatory">
+            <div class="step-card-left">
+              <span class="step-cb-icon">✂️</span>
+              <div class="step-cb-info">
+                <span class="step-cb-name">1. مرحلة التقطيع</span>
+                <span class="step-cb-sub">قص وتجهيز الزجاج</span>
+              </div>
+            </div>
+            <div class="step-mandatory-pill">أساسية ✓</div>
+          </div>
+
+          <!-- 2. Securit (Checkbox) -->
+          <label class="step-checkbox-card clickable" [class.selected]="includeSecurit">
+            <div class="step-card-left">
+              <span class="step-cb-icon">🛡️</span>
+              <div class="step-cb-info">
+                <span class="step-cb-name">2. مرحلة السيكوريت</span>
+                <span class="step-cb-sub">معالجة وتقسية حرارية</span>
+              </div>
+            </div>
+            <div class="step-custom-checkbox">
+              <input
+                type="checkbox"
+                [(ngModel)]="includeSecurit"
+                name="includeSecurit"
+              />
+              <span class="checkmark"></span>
+            </div>
+          </label>
+
+          <!-- 3. Double (Checkbox) -->
+          <label class="step-checkbox-card clickable" [class.selected]="includeDouble">
+            <div class="step-card-left">
+              <span class="step-cb-icon">🪟</span>
+              <div class="step-cb-info">
+                <span class="step-cb-name">3. مرحلة الدبل</span>
+                <span class="step-cb-sub">عزل وتجميع طبقات دبل</span>
+              </div>
+            </div>
+            <div class="step-custom-checkbox">
+              <input
+                type="checkbox"
+                [(ngModel)]="includeDouble"
+                name="includeDouble"
+              />
+              <span class="checkmark"></span>
+            </div>
+          </label>
+
+          <!-- 4. Delivery (Mandatory) -->
+          <div class="step-checkbox-card locked-mandatory">
+            <div class="step-card-left">
+              <span class="step-cb-icon">🚚</span>
+              <div class="step-cb-info">
+                <span class="step-cb-name">4. مرحلة التسليم</span>
+                <span class="step-cb-sub">فحص نهائي وتجهيز التسليم</span>
+              </div>
+            </div>
+            <div class="step-mandatory-pill">أساسية ✓</div>
+          </div>
+        </div>
+
+        <!-- Warning if both Securit & Double unchecked -->
+        <div class="step-selection-alert error" *ngIf="!isValidStepSelection">
+          <span>⚠️</span>
+          <span>يجب اختيار مرحلة واحدة على الأقل بين (سيكوريت) أو (دبل) لإنشاء الطلب!</span>
+        </div>
+      </div>
+
       <div class="modal-actions">
         <button
           type="submit"
           class="btn btn-primary"
-          [disabled]="isCreating || !newCustomerName.trim() || !newOrderDetails.trim()"
+          [disabled]="isCreating || !newCustomerName.trim() || !newOrderDetails.trim() || !isValidStepSelection"
         >
           {{ isCreating ? '⏳ جاري الإنشاء...' : '✓ إنشاء الطلب' }}
         </button>
